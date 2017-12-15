@@ -431,12 +431,15 @@ static void fdevent_register(fdevent *fde)
         FATAL("bogus negative fd (%d)\n", fde->fd);
     }
 
+	//fd_table_max初始值为0
     if(fde->fd >= fd_table_max) {
         int oldmax = fd_table_max;
         if(fde->fd > 32000) {
             FATAL("bogus huuuuge fd (%d)\n", fde->fd);
         }
+		//如果fd_table_max为0,说明为第一次进入,调用fdevent_init初始化,将fd_table_max设为256
         if(fd_table_max == 0) {
+			//fdevent_init中初始化用于读写的fd_set:read_fds,write_fds,error_fds
             fdevent_init();
             fd_table_max = 256;
         }
@@ -447,6 +450,7 @@ static void fdevent_register(fdevent *fde)
         if(fd_table == 0) {
             FATAL("could not expand fd_table to %d entries\n", fd_table_max);
         }
+		//初始化新增的fdevent
         memset(fd_table + oldmax, 0, sizeof(int) * (fd_table_max - oldmax));
     }
 
@@ -602,7 +606,9 @@ void fdevent_install(fdevent *fde, int fd, fd_func func, void *arg)
 #ifndef HAVE_WINSOCK
     fcntl(fd, F_SETFL, O_NONBLOCK);
 #endif
+	//将fde注册到全局数组fd_table中,fd_table[fde->fd]=fde
     fdevent_register(fde);
+	//在debug版本中打印出fde的fd,是R,W还是E
     dump_fde(fde, "connect");
     fdevent_connect(fde);
     fde->state |= FDE_ACTIVE;
